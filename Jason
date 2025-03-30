@@ -1,0 +1,164 @@
+# -*- coding: utf-8 -*-
+"""student_manager.ipynb
+
+Custom script for managing student information with widgets.
+
+"""
+
+import json
+import ipywidgets as widgets
+from IPython.display import display, clear_output, HTML
+
+# Define custom CSS for styling the widgets
+css = """
+<style>
+    /* General widget styling */
+    .widget-label {
+        font-size: 16px;
+        font-weight: bold;
+        color: #4A90E2;
+    }
+
+    .widget-text {
+        font-size: 14px;
+        padding: 8px;
+        margin: 5px 0;
+    }
+
+    .widget-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 10px;
+        font-size: 16px;
+        cursor: pointer;
+        border-radius: 5px;
+    }
+
+    .widget-button:hover {
+        background-color: #45a049;
+    }
+
+    .widget-dropdown {
+        font-size: 14px;
+        padding: 5px;
+    }
+
+    /* Styling for the link display */
+    .link-display {
+        font-size: 14px;
+        color: #1E90FF;
+        text-decoration: underline;
+    }
+
+    /* Container styling */
+    .container {
+        margin: 20px 0;
+        padding: 20px;
+        border-radius: 10px;
+        border: 1px solid #ddd;
+        background-color: #f9f9f9;
+    }
+</style>
+"""
+
+# Display the CSS
+display(HTML(css))
+
+# Function to load student data from a JSON file
+def fetch_student_data():
+    try:
+        with open('students.json', 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        print("Error: 'students.json' could not be found.")
+        return []  # Return an empty list if the file is missing
+
+# Initial data load
+students = fetch_student_data()
+
+# Widget for selecting a student
+student_selector_label = widgets.Label(value="Choose Student:", layout=widgets.Layout(margin="5px 0"))
+student_selector = widgets.Dropdown(
+    options=[(student['name'], index) for index, student in enumerate(students)],
+    description='',
+    disabled=False,
+    value=0,
+    layout=widgets.Layout(width='200px', margin="10px 0"),
+    style={'description_width': 'initial'}
+)
+
+student_selector_box = widgets.HBox([student_selector_label, student_selector], layout=widgets.Layout(margin='10px 0px'))
+
+# Widget for entering and displaying the favorite program
+fav_program_label = widgets.Label(value="Favorite Program:", layout=widgets.Layout(margin="5px 0"))
+fav_program_input = widgets.Text(
+    description='',
+    layout=widgets.Layout(width='190px', margin="5px 0"),
+    style={'description_width': 'initial'}
+)
+
+# Widget for displaying the student link as a clickable URL
+link_display = widgets.HTML(description='Link:', value="", layout=widgets.Layout(width='300px', margin="5px 0"))
+
+fav_program_box = widgets.HBox([fav_program_label, fav_program_input], layout=widgets.Layout(margin='10px 0px'))
+link_box = widgets.HBox([link_display], layout=widgets.Layout(margin='10px 0px'))
+
+# Widgets for displaying student details
+name_input = widgets.Text(description='Name:', disabled=True, layout=widgets.Layout(width='300px', margin="5px 0"))
+last_name_input = widgets.Text(description='Last Name:', disabled=True, layout=widgets.Layout(width='300px', margin="5px 0"))
+email_input = widgets.Text(description='Email:', disabled=True, layout=widgets.Layout(width='300px', margin="5px 0"))
+class_input = widgets.Text(description='Class:', disabled=True, layout=widgets.Layout(width='300px', margin="5px 0"))
+
+update_button = widgets.Button(description='Save Changes', layout=widgets.Layout(width='300px', margin="10px 0"))
+update_button.style.button_color = 'lightgreen'  # Button color
+
+output_area = widgets.Output()
+
+# Function to update student details in the UI
+def show_student_details(selected_index):
+    with output_area:
+        clear_output(wait=True)
+        if 0 <= selected_index < len(students):
+            student = students[selected_index]
+            name_input.value = student['name']
+            last_name_input.value = student['lname']
+            email_input.value = student['email']
+            class_input.value = ", ".join(student['class'])
+
+            # Display the student's link
+            link_display.value = f'<a href="{student["link"]}" target="_blank" class="link-display">Visit Link</a>'
+
+            # Populate the favorite program input with the current value
+            fav_program_input.value = student.get('favorite_program', '')
+        else:
+            print("Invalid Student Index")
+
+# Function to save updated student data back to the JSON file
+def save_updated_data(button):
+    with output_area:
+        clear_output(wait=True)
+        selected_index = student_selector.value
+        if 0 <= selected_index < len(students):
+            students[selected_index]['favorite_program'] = fav_program_input.value  # Save the updated favorite program
+
+            try:
+                # Save the updated student list back to the JSON file
+                with open('students.json', 'w') as file:
+                    json.dump(students, file, indent=4)
+                print("Changes saved successfully!")
+            except Exception as e:
+                print(f"Error while saving data: {e}")
+        else:
+            print("Please select a valid student.")
+
+# Attach event listeners
+student_selector.observe(lambda change: show_student_details(change.new), names='value')
+update_button.on_click(save_updated_data)
+
+# Initialize the display with the first student's details
+show_student_details(0)
+
+# Display the widgets in the notebook
+container = widgets.VBox([student_selector_box, name_input, last_name_input, email_input, class_input, link_box, fav_program_box, update_button, output_area], layout=widgets.Layout(padding="20px", border="2px solid #ddd", border_radius="10px", background_color="#f9f9f9"))
+display(container)
